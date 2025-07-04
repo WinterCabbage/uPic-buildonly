@@ -1,0 +1,50 @@
+name: Xcode - Build and Analyze
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: Build and analyse default scheme using xcodebuild command
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Debug - list schemes
+        run: |
+          echo "Listing schemes in workspace:"
+          xcodebuild -list -workspace uPic.xcworkspace
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods
+          pod install
+
+      - name: Build uPic
+        run: |
+          xcodebuild \
+            -workspace uPic.xcworkspace \
+            -scheme uPic \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build \
+            -derivedDataPath build
+
+      - name: Package app
+        run: |
+          mkdir dist
+          cp -R build/Build/Products/Release/uPic.app dist/
+          ditto -c -k --sequesterRsrc --keepParent dist/uPic.app dist/uPic.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uPic-unsigned
+          path: dist/uPic.zip
+    
